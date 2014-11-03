@@ -42,29 +42,59 @@ sub display_index {
   # load configuration as a hash ref
   $self->param('act_config', load_config( $self->param('config') ) );
   
-  # load template file with HTML::Template
-  my $tmpl_obj;
-  if(-e $self->param('act_config')->{'_'}->{'tmpl_path'} . 'index.tmpl' ) {
-    $tmpl_obj = $self->load_tmpl( $self->param('act_config')->{'_'}->{'tmpl_path'} . 'index.tmpl' );
+  # is this a single_user mode?
+  my $single_user;
+  if($self->param('act_config')->{'_'}->{'single_user'} == 1) {
+    $single_user = 1;
   }
   else {
-    $tmpl_obj = $self->load_tmpl( \$Web::Passwd::INDEX_TEMPLATE );
+    $single_user = 0;
   }
-  
-  # get list of htpasswd config blocks
-  my @htfiles;
-  for my $key (keys %{$self->param('act_config')}) {
-    if($key ne '_') {
-      push(@htfiles, {'TITLE' => $key});
+
+  # add stuff for derek's hack
+  my $edituser = $ENV{REMOTE_USER};
+
+  if ($single_user){
+    my $tmpl_obj;
+    if(-e $self->param('act_config')->{'_'}->{'tmpl_path'} . 'single.tmpl' ) {
+      $tmpl_obj = $self->load_tmpl( $self->param('act_config')->{'_'}->{'tmpl_path'} . 'single.tmpl' );
     }
+    else {
+      $tmpl_obj = $self->load_tmpl( \$Web::Passwd::SINGLE_TEMPLATE );
+    }
+
+    $tmpl_obj->param(
+      'HTFILENAME' => $query_obj->param('htfile'),
+      'USER_LOOP' => \@users,
+      'EDITUSER' => $edituser,
+      'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
+      'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
+    );
+  } else {
+    # load template file with HTML::Template
+    my $tmpl_obj;
+    if(-e $self->param('act_config')->{'_'}->{'tmpl_path'} . 'index.tmpl' ) {
+      $tmpl_obj = $self->load_tmpl( $self->param('act_config')->{'_'}->{'tmpl_path'} . 'index.tmpl' );
+    }
+    else {
+      $tmpl_obj = $self->load_tmpl( \$Web::Passwd::INDEX_TEMPLATE );
+    }
+    
+    # get list of htpasswd config blocks
+    my @htfiles;
+    for my $key (keys %{$self->param('act_config')}) {
+      if($key ne '_') {
+        push(@htfiles, {'TITLE' => $key});
+      }
+    }
+    
+    # pass template parameters
+    $tmpl_obj->param(
+      'HTFILES' => \@htfiles,
+      'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
+      'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
+    );
   }
-  
-  # pass template parameters
-  $tmpl_obj->param(
-    'HTFILES' => \@htfiles,
-    'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
-    'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
-  );
   
   # return template-generated output
   return $tmpl_obj->output;
@@ -101,7 +131,7 @@ sub display_htfile {
   # pass template parameters
   $tmpl_obj->param(
     'HTFILENAME' => $query_obj->param('htfile'),
-    #'USER_LOOP' => \@users,
+    'USER_LOOP' => \@users,
     'EDITUSER' => $edituser,
     'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
     'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
@@ -540,6 +570,68 @@ table { font-family: Arial }
 -->
 HTML_CODE
 
+$Web::Passwd::SINGLE_TEMPLATE = <<'HTML_CODE';
+<html>
+
+<head>
+<title>Web Htpasswd Management</title>
+<style>
+body { font-family: Arial }
+table { font-family: Arial }
+</style>
+</head>
+
+<body>
+
+<center>
+
+<h1>Managing Htpasswd File:</h1>
+<h3><TMPL_VAR NAME="HTFILENAME"></h3>
+
+<hr>
+
+<p>
+<form method="<TMPL_VAR NAME="FORM_METHOD" DEFAULT="POST">">
+<input type="hidden" name="htfile" value="<TMPL_VAR NAME="HTFILENAME">">
+<input type="hidden" name="mode" value="changepw">
+<input type="hidden" name="user" value="<TMPL_VAR NAME="EDITUSER">">
+<fieldset style="width: 400">
+  <legend style="font-weight: bold">Change Password</legend>
+  <table width="350">
+    <tr>
+      <td>Password:&nbsp;&nbsp;</td>
+      <td><input type="password" name="pass" size=255 style="width: 200"></td>
+    </tr>
+    <tr>
+      <td>Retype Password:&nbsp;&nbsp;</td>
+      <td><input type="password" name="pass_confirm" size=255 style="width: 200"></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><input type="submit" value="Change Password"></td>
+    </tr>
+  </table>
+</fieldset>
+</form>
+</p>
+
+<hr>
+<a href="?">Back to Main</a>
+<TMPL_IF NAME="IS_WARNINGS">
+<hr>
+<span style="color: red">Warnings were encountered...Please check error log.</span>
+</TMPL_IF>
+
+</center>
+
+</body>
+
+</html>
+<!--
+<TMPL_VAR NAME="DEBUG_DUMP" DEFAULT="">
+-->
+HTML_CODE
+
 $Web::Passwd::STATUS_TEMPLATE = <<'HTML_CODE';
 <html>
 
@@ -587,10 +679,10 @@ Web::Passwd - Web-based htpasswd Management
 
 =head1 VERSION
 
-Version 0.03
+Version 0.05
 
 =cut
-our $VERSION = "0.03";
+our $VERSION = "0.05";
 
 =head1 SYNOPSIS
 
