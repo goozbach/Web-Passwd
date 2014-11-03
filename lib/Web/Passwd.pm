@@ -95,10 +95,14 @@ sub display_htfile {
     push(@users, {'USERNAME' => $user});
   }
   
+  # add stuff for derek's hack
+  my $edituser = $ENV{REMOTE_USER};
+
   # pass template parameters
   $tmpl_obj->param(
     'HTFILENAME' => $query_obj->param('htfile'),
-    'USER_LOOP' => \@users,
+    #'USER_LOOP' => \@users,
+    'EDITUSER' => $edituser,
     'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
     'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
   );
