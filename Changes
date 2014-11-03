@@ -12,3 +12,6 @@ Revision history for Web::Passwd
         Replaced $Config package variable with lexical variable
         Fixed minor typos/errors in POD documentation
         Fixed a permission issue with the distribution (credit to Mark Stosberg)
+
+0.04    Mon Nov  3 12:59:09 MST 2014
+        Added Derek hacks for user mgmt

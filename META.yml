@@ -1,8 +1,9 @@
 ---
 name: Web-Passwd
-version: 0.03
+version: 0.04
 author:
   - 'Evan Kaufman <evank@cpan.org>'
+  - 'Derek Carter <derek@goozbach.com>'
 abstract: Web-based htpasswd Management
 license: perl
 build_requires:
@@ -16,6 +17,6 @@ meta-spec:
 provides:
   Web::Passwd:
     file: lib/Web/Passwd.pm
-    version: 0.03
+    version: 0.04
 resources:
   license: http://dev.perl.org/licenses/
