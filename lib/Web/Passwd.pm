@@ -6,7 +6,7 @@ use base 'CGI::Application';
 
 use strict;
 use warnings;
-use CGI::Carp qw/fatalsToBrowser warningsToBrowser/;
+use CGI::Carp qw/fatalsToBrowser warningsToBrowser croak confess carp cluck/;
 use Config::Tiny;
 
 # set up application framework, including mode parameter and dispatch table
@@ -42,20 +42,13 @@ sub display_index {
   # load configuration as a hash ref
   $self->param('act_config', load_config( $self->param('config') ) );
   
+  my $tmpl_obj;
+
   # is this a single_user mode?
   my $single_user;
-  if($self->param('act_config')->{'_'}->{'single_user'} == 1) {
-    $single_user = 1;
-  }
-  else {
-    $single_user = 0;
-  }
-
-  # add stuff for derek's hack
-  my $edituser = $ENV{REMOTE_USER};
-
-  if ($single_user){
-    my $tmpl_obj;
+  if($self->param('act_config')->{'_'}->{'single_user'}) {
+    # add stuff for derek's hack
+    my $edituser = $ENV{REMOTE_USER};
     if(-e $self->param('act_config')->{'_'}->{'tmpl_path'} . 'single.tmpl' ) {
       $tmpl_obj = $self->load_tmpl( $self->param('act_config')->{'_'}->{'tmpl_path'} . 'single.tmpl' );
     }
@@ -63,16 +56,23 @@ sub display_index {
       $tmpl_obj = $self->load_tmpl( \$Web::Passwd::SINGLE_TEMPLATE );
     }
 
+    my $htaccess_file;
+    # get the htaccess file
+    if(-e $self->param('act_config')->{'_'}->{'htpasswd_file'}) {
+      $htaccess_file = $self->param('act_config')->{'_'}->{'htpasswd_file'};
+    } else {
+        die("htpasswd file not found")
+    }
+
     $tmpl_obj->param(
-      'HTFILENAME' => $query_obj->param('htfile'),
-      'USER_LOOP' => \@users,
+      'HTFILENAME' => $htaccess_file,
       'EDITUSER' => $edituser,
       'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
       'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
     );
-  } else {
+  }
+  else {
     # load template file with HTML::Template
-    my $tmpl_obj;
     if(-e $self->param('act_config')->{'_'}->{'tmpl_path'} . 'index.tmpl' ) {
       $tmpl_obj = $self->load_tmpl( $self->param('act_config')->{'_'}->{'tmpl_path'} . 'index.tmpl' );
     }
@@ -95,7 +95,8 @@ sub display_index {
       'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
     );
   }
-  
+
+
   # return template-generated output
   return $tmpl_obj->output;
 }
@@ -200,16 +201,27 @@ sub user_op {
   # load configuration as a hash ref
   $self->param('act_config', load_config( $self->param('config') ) );
   
-  # add new or change existing user/pass
+  my $edituser = $ENV{REMOTE_USER};
   my @users = $query_obj->param('user');
+  # add new or change existing user/pass
   if($user_mode eq 'adduser' || $user_mode eq 'changepw') {
-    htfile_moduser(
-      $self->param('act_config')->{'_'}->{'htpasswd_command'},
-      $self->param('act_config')->{ $query_obj->param('htfile') }->{'path'},
-      $users[0],
-      $query_obj->param('pass'),
-      $self->param('act_config')->{ $query_obj->param('htfile') }->{'algorithm'}
-    );
+    if ($self->param('act_config')->{'_'}->{'single_user'}) {
+      htfile_moduser(
+        $self->param('act_config')->{'_'}->{'htpasswd_command'},
+        $self->param('act_config')->{'_'}->{'htpasswd_file'},
+        $edituser,
+        $query_obj->param('pass'),
+        $self->param('act_config')->{'_'}->{'algorithm'}
+      );
+    } else {
+      htfile_moduser(
+        $self->param('act_config')->{'_'}->{'htpasswd_command'},
+        $self->param('act_config')->{ $query_obj->param('htfile') }->{'path'},
+        $users[0],
+        $query_obj->param('pass'),
+        $self->param('act_config')->{ $query_obj->param('htfile') }->{'algorithm'}
+      );
+    }
   }
   # or delete existing user(s)
   elsif($user_mode eq 'deluser') {
@@ -679,10 +691,10 @@ Web::Passwd - Web-based htpasswd Management
 
 =head1 VERSION
 
-Version 0.05
+Version 0.06
 
 =cut
-our $VERSION = "0.05";
+our $VERSION = "0.06";
 
 =head1 SYNOPSIS
 
