@@ -133,7 +133,6 @@ sub display_htfile {
   $tmpl_obj->param(
     'HTFILENAME' => $query_obj->param('htfile'),
     'USER_LOOP' => \@users,
-    'EDITUSER' => $edituser,
     'IS_WARNINGS' => $#CGI::Carp::WARNINGS + 1,
     'FORM_METHOD' => $self->param('act_config')->{'_'}->{'form_method'},
   );
@@ -691,10 +690,10 @@ Web::Passwd - Web-based htpasswd Management
 
 =head1 VERSION
 
-Version 0.06
+Version 0.07
 
 =cut
-our $VERSION = "0.06";
+our $VERSION = "0.07";
 
 =head1 SYNOPSIS
 
