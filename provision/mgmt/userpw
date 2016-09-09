@@ -1,0 +1,6 @@
+#!/bin/env perl
+
+use Web::Passwd;
+
+my $webapp = Web::Passwd->new();
+$webapp->run();
